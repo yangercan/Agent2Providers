@@ -1,0 +1,47 @@
+name: Build (fork)
+
+# 自建 fork 的编译自检：不发布 Release、不签名，只验证「能编译 + 协议握手通过」
+# 并把 Windows x64 二进制作为 artifact 传出来，方便直接装进网关试。
+#
+# 官方发布链路（release.yml / build.yml）仍然原样保留，不受本文件影响。
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [lingxi]
+    paths:
+      - 'crates/**'
+      - 'pack.json'
+      - '.github/workflows/build-fork.yml'
+
+jobs:
+  windows-x64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - name: 编译
+        run: cargo build --release -p agent2api-providers
+
+      - name: 协议验证（demo 基线，真机启动）
+        run: node scripts/verify.mjs --exe target/release/agent2api-providers.exe
+
+      - name: 打包（不签名）
+        run: node scripts/pack.mjs --skip-build --target x86_64-pc-windows-msvc
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: agent2api-providers-lingxi-windows-x64
+          path: |
+            dist/*.zip
+          if-no-files-found: error

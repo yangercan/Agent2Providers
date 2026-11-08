@@ -10,6 +10,7 @@ const STREAM_FUNCTIONS: &[(&str, &str)] = &[
     ("src/providers/kuku/http.rs", "sse_post"),
     ("src/providers/orcaterm/chat.rs", "open_chat_stream"),
     ("src/providers/catpaw/upstream_http.rs", "turn_request"),
+    ("src/providers/lingxi/mod.rs", "conversation"),
 ];
 
 #[derive(Default)]

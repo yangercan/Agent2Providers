@@ -64,6 +64,8 @@ pub mod doubaowork;
 pub mod kiro;
 #[cfg(feature = "astudio")]
 pub mod astudio;
+#[cfg(feature = "lingxi")]
+pub mod lingxi;
 
 use agent2api_provider_sdk::BoxProvider;
 
@@ -185,6 +187,10 @@ pub fn registry() -> Vec<BoxProvider> {
 
     #[cfg(feature = "astudio")]
     list.push(Box::new(astudio::AStudioProvider));
+
+    // 加新家请加在末尾 —— 插在中间会让存量用户的界面顺序变一下。
+    #[cfg(feature = "lingxi")]
+    list.push(Box::new(lingxi::LingxiProvider));
 
     list
 }
