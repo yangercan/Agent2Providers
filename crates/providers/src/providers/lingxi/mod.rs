@@ -480,16 +480,19 @@ async fn send_chat(
     // run 头与客户端一致：全小写键名。
     headers.push(("x-cc-session-id".into(), run.session_id.clone()));
     headers.push(("x-cc-run-id".into(), run.run_id.clone()));
-    let sse = http::post_stream(&client, &format!("{}{CHAT_PATH}", run.base), &headers, payload, "*/*").await?;
-    if sse.is_success() {
-        return sse.response.ok_or_else(|| "灵犀上游没有返回响应体".to_string());
+    // 解构而不是借字段：error_body 被 unwrap_or_default 拿走后，
+    // 再用 sse.error_head() 会撞 E0382（部分移动后再借用）。
+    let crate::http::SseResponse { status, response, error_body } =
+        http::post_stream(&client, &format!("{}{CHAT_PATH}", run.base), &headers, payload, "*/*").await?;
+    if (200..300).contains(&status) {
+        return response.ok_or_else(|| "灵犀上游没有返回响应体".to_string());
     }
-    let text = sse.error_body.unwrap_or_default();
+    let text = error_body.unwrap_or_default();
     let parsed: Value = serde_json::from_str(&text).unwrap_or_else(|_| json!({ "message": text }));
     if is_audit_error(&parsed) {
         return Err(format!("灵犀内容审核拦截：{}", brief(&parsed)));
     }
-    Err(format!("灵犀上游返回 {}：{}", sse.status, sse.error_head()))
+    Err(format!("灵犀上游返回 {}：{}", status, text.chars().take(240).collect::<String>()))
 }
 
 /// 会话/run 失效（上游回收或重建过）——重建一次再试。
